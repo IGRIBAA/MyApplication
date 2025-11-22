@@ -6,7 +6,11 @@ import com.example.myapplication.data.db.QuizResult
 import com.example.myapplication.data.model.HistoryItem
 import com.example.myapplication.data.model.Question
 import com.example.myapplication.data.repository.QuizRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class QuizUiState(
@@ -26,15 +30,18 @@ class QuizViewModel(
     private val _uiState = MutableStateFlow(QuizUiState())
     val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
 
-    // 🔥 Historique exposé automatiquement via stateIn()
-    val history: StateFlow<List<HistoryItem>> = repository
-        .getHistory()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    // Historique exposé comme StateFlow pour HistoryScreen
+    val history: StateFlow<List<HistoryItem>> =
+        repository.getHistory()
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // -------------------------------------------------
-    //                Charger un quiz
-    // -------------------------------------------------
-    fun loadQuiz(amount: Int, category: Int, difficulty: String) {
+    // --------- Quiz ---------
+
+    fun loadQuiz(
+        amount: Int,
+        category: Int,
+        difficulty: String
+    ) {
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(
@@ -52,7 +59,6 @@ class QuizViewModel(
                     currentCategory = category.toString(),
                     currentDifficulty = difficulty
                 )
-
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -62,22 +68,31 @@ class QuizViewModel(
         }
     }
 
-    // -------------------------------------------------
-    //            Répondre à une question
-    // -------------------------------------------------
-    fun answer(isCorrect: Boolean) {
+    /**
+     * Enregistre la réponse (met à jour le score) mais
+     * **NE CHANGE PLUS DE QUESTION** ici.
+     */
+    fun registerAnswer(isCorrect: Boolean) {
         val state = _uiState.value
         if (state.currentIndex >= state.questions.size) return
 
         _uiState.value = state.copy(
-            score = if (isCorrect) state.score + 1 else state.score,
-            currentIndex = state.currentIndex + 1
+            score = if (isCorrect) state.score + 1 else state.score
         )
     }
 
-    // -------------------------------------------------
-    //           Enregistrer la partie jouée
-    // -------------------------------------------------
+    /**
+     * Passe à la question suivante.
+     */
+    fun goToNextQuestion() {
+        val state = _uiState.value
+        if (state.currentIndex + 1 < state.questions.size) {
+            _uiState.value = state.copy(
+                currentIndex = state.currentIndex + 1
+            )
+        }
+    }
+
     fun saveCurrentResult() {
         val state = _uiState.value
         if (state.questions.isEmpty()) return

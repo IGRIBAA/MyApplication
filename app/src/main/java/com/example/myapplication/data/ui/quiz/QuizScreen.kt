@@ -8,192 +8,196 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.*
 import com.example.myapplication.viewmodel.QuizViewModel
-import androidx.compose.foundation.border
+import kotlinx.coroutines.delay
 
 @Composable
 fun QuizScreen(
     viewModel: QuizViewModel,
     onQuizFinished: () -> Unit
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
-    if (state.isLoading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(BackgroundDark),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = PurplePrimary)
-        }
-        return
-    }
+    val currentQuestion = uiState.questions.getOrNull(uiState.currentIndex)
 
-    if (state.error != null) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(BackgroundDark),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Erreur : ${state.error}",
-                color = RedWrong
-            )
-        }
-        return
-    }
-
-    val questions = state.questions
-    val index = state.currentIndex
-
-    if (index >= questions.size || questions.isEmpty()) {
-        // plus de questions → on termine
-        onQuizFinished()
-        return
-    }
-
-    val question = questions[index]
-    val progress = (index + 1f) / questions.size.toFloat()
-
-    // Pour colorer les réponses après clic
-    var selectedAnswer by remember { mutableStateOf<String?>(null) }
-    var isLocked by remember { mutableStateOf(false) }
+    // État local pour la sélection
+    var selectedAnswer by remember(uiState.currentIndex) { mutableStateOf<String?>(null) }
+    var isAnswerCorrect by remember(uiState.currentIndex) { mutableStateOf<Boolean?>(null) }
+    var hasAnswered by remember(uiState.currentIndex) { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(BackgroundDark, PurpleDark)
-                )
-            )
-            .padding(16.dp)
+            .background(BackgroundDark)
+            .padding(horizontal = 16.dp, vertical = 24.dp) // padding haut + côtés
     ) {
+        if (uiState.isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = PurplePrimary
+            )
+            return@Box
+        }
+
+        if (currentQuestion == null) {
+            // Plus de questions -> on termine
+            LaunchedEffect(Unit) {
+                viewModel.saveCurrentResult()
+                onQuizFinished()
+            }
+            return@Box
+        }
+
         Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top bar simple
-            Row(
+            // --------- Header : progression + score ---------
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Question ${index + 1}/${questions.size}",
+                    text = "Question ${uiState.currentIndex + 1} / ${uiState.questions.size}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = TextSecondary
+                )
+
+                LinearProgressIndicator(
+                    progress = (uiState.currentIndex + 1).toFloat() / uiState.questions.size.toFloat(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
+                    color = PurplePrimary,
+                    trackColor = CardDark
+                )
+
+                Text(
+                    text = "Score : ${uiState.score}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = BlueAccent
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --------- Question ---------
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = CardDark),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Text(
+                    text = currentQuestion.question,
+                    modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary
                 )
-                Text(
-                    text = "Score : ${state.score}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = BlueAccent,
-                    fontWeight = FontWeight.SemiBold
-                )
             }
 
-            LinearProgressIndicator(
-                progress = progress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(50)),
-                color = PurplePrimary,
-                trackColor = CardDark
-            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Carte de question
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = CardDark
-                ),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = question.question,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // --------- Réponses ---------
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                question.answers.forEach { answer ->
-                    val isCorrect = answer == question.correctAnswer
-                    val isSelected = answer == selectedAnswer
+                currentQuestion.answers.forEach { answer ->
+                    val backgroundColor = when {
+                        !hasAnswered -> CardDark
+                        // bonne réponse, toujours en vert quand on a répondu
+                        answer == currentQuestion.correctAnswer -> GreenCorrect
+                        // réponse sélectionnée mais fausse
+                        answer == selectedAnswer && isAnswerCorrect == false -> RedWrong
+                        else -> CardDark
+                    }
 
-                    val backgroundColor =
-                        when {
-                            !isLocked && isSelected -> CardLight
-                            isLocked && isSelected && isCorrect -> GreenCorrect
-                            isLocked && isSelected && !isCorrect -> RedWrong
-                            else -> CardLight
-                        }
-
-                    val borderColor =
-                        if (isLocked && isCorrect) GreenCorrect else CardLight
-
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(backgroundColor)
-                            .border(
-                                width = 2.dp,
-                                color = borderColor,
-                                shape = RoundedCornerShape(18.dp)
-                            )
-                            .clickable(enabled = !isLocked) {
-                                selectedAnswer = answer
-                                isLocked = true
-                                viewModel.answer(isCorrect)
-                            }
-                            .padding(14.dp)
+                            .clickable(enabled = !hasAnswered) {
+                                // On ne traite la réponse qu'une seule fois
+                                if (!hasAnswered) {
+                                    selectedAnswer = answer
+                                    val correct = answer == currentQuestion.correctAnswer
+                                    isAnswerCorrect = correct
+                                    hasAnswered = true
+                                    viewModel.registerAnswer(correct)
+                                }
+                            },
+                        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
                             text = answer,
-                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
+                            style = MaterialTheme.typography.bodyLarge,
                             color = TextPrimary
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // --------- Explication / correction ---------
+            if (hasAnswered) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // Bouton "Suivant"
+                val explanationText = if (isAnswerCorrect == true) {
+                    "Bien joué ! Tu as choisi la bonne réponse."
+                } else {
+                    // On n'a pas de vraie explication depuis l’API,
+                    // donc on affiche au moins la bonne réponse.
+                    "Ce n’est pas correct. La bonne réponse était : \"${currentQuestion.correctAnswer}\""
+                }
+
+                Text(
+                    text = explanationText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isAnswerCorrect == true) GreenCorrect else TextSecondary
+                )
+            } else {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // --------- Bouton "Question suivante" ---------
             Button(
                 onClick = {
-                    selectedAnswer = null
-                    isLocked = false
-
-                    if (index + 1 >= questions.size) {
+                    if (uiState.currentIndex == uiState.questions.lastIndex) {
+                        // dernière question -> on sauvegarde + nav vers résultats
+                        viewModel.saveCurrentResult()
                         onQuizFinished()
+                    } else {
+                        // passe à la suivante et reset l'état local
+                        viewModel.goToNextQuestion()
+                        selectedAnswer = null
+                        isAnswerCorrect = null
+                        hasAnswered = false
                     }
                 },
+                enabled = hasAnswered, // on force à répondre avant
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 8.dp)
                     .height(52.dp),
-                enabled = isLocked
+                shape = RoundedCornerShape(999.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PurplePrimary,
+                    disabledContainerColor = CardDark
+                )
             ) {
-                Text(if (index + 1 >= questions.size) "Voir le résultat" else "Question suivante")
+                Text(
+                    text = if (uiState.currentIndex == uiState.questions.lastIndex)
+                        "Terminer le quiz"
+                    else
+                        "Question suivante",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = TextPrimary
+                )
             }
         }
     }

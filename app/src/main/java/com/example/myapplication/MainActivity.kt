@@ -49,8 +49,10 @@ fun QuizNavHost(viewModel: QuizViewModel) {
         composable("home") {
             HomeScreen(
                 viewModel = viewModel,
-                onStartQuiz = { amount, category, difficulty ->
+                onStartQuiz = { amount: Int, category: Int, difficulty: String ->
+                    // On charge les questions
                     viewModel.loadQuiz(amount, category, difficulty)
+                    // Puis on va vers l’écran du quiz
                     navController.navigate("quiz")
                 },
                 onShowHistory = {
@@ -63,13 +65,15 @@ fun QuizNavHost(viewModel: QuizViewModel) {
             QuizScreen(
                 viewModel = viewModel,
                 onQuizFinished = {
+                    // On sauvegarde le résultat puis on va vers l’écran de résultat
+                    viewModel.saveCurrentResult()
                     navController.navigate("result")
                 }
             )
         }
 
-        composable("result") {
-            ResultScreen(
+        composable("history") {
+            HistoryScreen(
                 viewModel = viewModel,
                 onBackToHome = {
                     navController.popBackStack("home", inclusive = false)
@@ -77,8 +81,8 @@ fun QuizNavHost(viewModel: QuizViewModel) {
             )
         }
 
-        composable("history") {
-            HistoryScreen(
+        composable("result") {
+            ResultScreen(
                 viewModel = viewModel,
                 onBackToHome = {
                     navController.popBackStack("home", inclusive = false)

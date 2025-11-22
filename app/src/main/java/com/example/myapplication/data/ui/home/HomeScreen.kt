@@ -2,17 +2,21 @@ package com.example.myapplication.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.ui.theme.*
-
+import com.example.myapplication.ui.theme.BackgroundDark
+import com.example.myapplication.ui.theme.PurplePrimary
+import com.example.myapplication.ui.theme.TextPrimary
+import com.example.myapplication.ui.theme.TextSecondary
 import com.example.myapplication.viewmodel.QuizViewModel
 
 @Composable
@@ -21,138 +25,91 @@ fun HomeScreen(
     onStartQuiz: (amount: Int, category: Int, difficulty: String) -> Unit,
     onShowHistory: () -> Unit
 ) {
+    // Définis ici les paramètres de ton “quick quiz”
+    val defaultAmount = 10
+    val defaultCategory = 18       // Informatique
+    val defaultDifficulty = "easy"
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(BackgroundDark, PurpleDark)
+                    listOf(
+                        BackgroundDark,
+                        BackgroundDark.copy(alpha = 0.95f)
+                    )
                 )
             )
-            .padding(24.dp)
+            .padding(horizontal = 24.dp)
     ) {
+
+        // Contenu principal centré
         Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            horizontalAlignment = Alignment.Start
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // Header
-            Column {
-                Text(
-                    text = "Quiz Galaxy",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Teste tes connaissances et gagne des points !",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-            }
-
-            // Carte de stats (pour l’instant statique)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = CardDark
-                ),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Dernier score",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = TextSecondary
-                        )
-                        Text(
-                            text = "8 / 10",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = BlueAccent,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Continue pour battre ton record !",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
-                        )
-                    }
-
-                    // Petit “badge” XP
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(PurplePrimary),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "XP",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "1320",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = TextSecondary
-                        )
-                    }
-                }
-            }
+            // Titre
+            Text(
+                text = "Quiz Trainer",
+                style = MaterialTheme.typography.headlineLarge,
+                color = TextPrimary
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Bouton principal "Jouer"
-            Button(
-                onClick = { onStartQuiz(10, 18, "easy") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text(
-                    text = "Commencer un quiz",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+            // Sous-titre simple
+            Text(
+                text = "Teste tes connaissances en quelques questions.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-            // Bouton secondaire
-            OutlinedButton(
-                onClick = onShowHistory,
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // Bouton principal : commencer un quiz
+            Button(
+                onClick = {
+                    onStartQuiz(defaultAmount, defaultCategory, defaultDifficulty)
+                },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.outlinedButtonColors(
+                    .fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PurplePrimary,
                     contentColor = TextPrimary
                 )
             ) {
-                Text("Voir l’historique des parties")
+                Text(text = "Commencer un quiz")
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Petit texte de footer
-            Text(
-                text = "Astuce : plus tu enchaînes les bonnes réponses, plus tu gagnes d’XP.",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
+            // Bouton secondaire : historique
+            OutlinedButton(
+                onClick = onShowHistory,
+                modifier = Modifier
+                    .fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = PurplePrimary
+                )
+            ) {
+                Text(text = "Voir l’historique des parties")
+            }
         }
+
+        // Petite phrase en bas de l’écran
+        Text(
+            text = "Astuce : l’objectif est juste de progresser, pas d’être parfait !",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        )
     }
 }
