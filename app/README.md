@@ -62,7 +62,7 @@ https://opentdb.com/api.php?amount=10&category=18&difficulty=easy&type=multiple
 
 Architecture : MVVM (Model – View – ViewModel)
 
-![Architecture MVVM du projet](Architecture MVVM.png)
+![Architecture MVVM du projet](./Architecture MVVM.png)
 
 
 ###  **UI Layer (Compose)**
