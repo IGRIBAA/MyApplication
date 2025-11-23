@@ -3,7 +3,6 @@
 #  Quiz Trainer
 ### *Application de quiz Android – Kotlin, Compose, Ktor, Room*
 
-<img src="docs/banner.png" width="80%" alt="Banner"/>
 
 </div>
 
@@ -84,24 +83,6 @@ Architecture : MVVM (Model – View – ViewModel)
 ###  **Data Layer**
 - **Ktor Client** → appel réseau + JSON
 - **Room** → stockage local
-
----
-## Structure du projet
-
-app/
-├── data/
-│    ├── api/ (Ktor service)
-│    ├── db/  (Room DAO + Entities + Database)
-│    └── model/ (DTO + modèles domaine)
-│
-├── ui/
-│    ├── home/
-│    ├── quiz/
-│    ├── result/
-│    └── theme/
-│
-├── viewmodel/
-└── MainActivity.kt
 
 ---
 
